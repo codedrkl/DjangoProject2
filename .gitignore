@@ -1,0 +1,33 @@
+# Django
+*.pyc
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual Environment
+.venv/
+venv/
+ENV/
+
+# Database
+*.sqlite3
+*.db
+
+# Logs
+*.log
+scheduler.log
+
+# PyCharm
+.idea/
+
+# Environment variables
+.env
+
+# Static & Media (optional)
+staticfiles/
+media/
+
+# OS
+.DS_Store
+Thumbs.db

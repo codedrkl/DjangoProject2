@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ES 6-DTE Option Chain</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { darkMode: 'class' }
+    </script>
+    <style>
+        body { font-family: ui-monospace, monospace; }
+    </style>
+</head>
+<body class="bg-zinc-950 text-white min-h-screen flex items-center justify-center">
+    <div class="text-center max-w-md mx-auto p-8">
+        <div class="text-6xl mb-6">📊</div>
+        <h1 class="text-4xl font-bold mb-4 text-yellow-400">No ES Data Yet</h1>
+        <p class="text-zinc-400 text-lg mb-8">
+            Run this command to download the full 6-DTE ES option chain (official settlements):
+        </p>
+        <div class="bg-zinc-900 p-4 rounded-xl text-left font-mono text-emerald-400 mb-6">
+            python manage.py download_es_eod
+        </div>
+        <p class="text-zinc-500 text-sm">
+            After it finishes, refresh this page.<br>
+            (Best to run after 2 AM AEST the next day for final settlements)
+        </p>
+        <button onclick="window.location.reload()"
+                class="mt-8 px-8 py-4 bg-yellow-500 hover:bg-yellow-400 text-black font-bold rounded-2xl transition">
+            Refresh Page
+        </button>
+    </div>
+</body>
+</html>
