@@ -1,75 +1,94 @@
-<!DOCTYPE html>
-<html lang="en" class="dark">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Outcome • Trade Suggestions</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Plotly CDN -->
-    <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
-    <style>
-        .card { transition: all 0.2s; }
-        .card:hover { transform: translateY(-4px); }
-    </style>
-</head>
-<body class="bg-zinc-950 text-white min-h-screen font-mono">
-<div class="max-w-7xl mx-auto p-8">
-    <div class="flex justify-between items-baseline mb-12">
-        <h1 class="text-5xl font-bold">Outcome • Trade Suggestions</h1>
-        <div class="text-right">
-            <p class="text-2xl">{{ snapshot.date }}</p>
-            {% if underlying %}
-            <p class="text-emerald-400 text-2xl">ES Future: {{ underlying|floatformat:2 }}</p>
-            {% endif %}
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+    /* Force Plotly to respect the CSS grid constraints and prevent overflow */
+    .plotly-container { width: 100% !important; overflow: hidden; }
+    .plotly-container .js-plotly-plot,
+    .plotly-container .plot-container,
+    .plotly-container svg.main-svg {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+</style>
+
+<div class="bg-[#0B0F19] min-h-screen p-8 font-sans">
+
+    <div class="flex justify-between items-center mb-8">
+        <h1 class="text-3xl font-black text-white tracking-tighter">Outcome <span class="text-zinc-500 font-normal">• Sentinel Scanner</span></h1>
+        <div class="text-zinc-500 text-[10px] font-bold tracking-widest uppercase">
+            ES Future: <span class="text-emerald-400 text-sm ml-1">{{ underlying|floatformat:2 }}</span>
         </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+    <div class="bg-[#111621] border border-zinc-800 rounded-2xl p-4 mb-8 flex flex-wrap items-end gap-6 shadow-lg shadow-black/50">
+        <div>
+            <label class="block text-[9px] text-zinc-500 uppercase tracking-widest font-bold mb-2">1. Expiry (DTE)</label>
+            <select class="bg-black border border-zinc-800 text-zinc-300 text-xs font-bold rounded p-2 outline-none w-32 focus:border-zinc-500">
+                <option>All Expiries</option>
+            </select>
+        </div>
+        <div>
+            <label class="block text-[9px] text-zinc-500 uppercase tracking-widest font-bold mb-2">2. Width</label>
+            <select class="bg-black border border-zinc-800 text-zinc-300 text-xs font-bold rounded p-2 outline-none w-32 focus:border-zinc-500">
+                <option>All Widths</option>
+            </select>
+        </div>
+        <div>
+            <label class="block text-[9px] text-zinc-500 uppercase tracking-widest font-bold mb-2">3. Min Prob (%)</label>
+            <input type="text" placeholder="e.g. 8" class="bg-black border border-zinc-800 text-zinc-300 text-xs font-bold rounded p-2 outline-none w-24 focus:border-zinc-500">
+        </div>
+        <div>
+            <label class="block text-[9px] text-zinc-500 uppercase tracking-widest font-bold mb-2">4. Max Credit ($)</label>
+            <input type="text" placeholder="50.0" class="bg-black border border-zinc-800 text-zinc-300 text-xs font-bold rounded p-2 outline-none w-24 focus:border-zinc-500">
+        </div>
+        <div class="ml-auto">
+            <button class="text-[9px] text-zinc-600 hover:text-zinc-300 uppercase tracking-widest font-bold transition-colors">Reset All</button>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {% for sug in suggestions %}
-        <div class="card bg-zinc-900 rounded-3xl p-8 border border-zinc-700 hover:border-yellow-400">
-            <div class="flex justify-between items-start mb-6">
+        <div class="bg-[#151923] border border-zinc-800/80 rounded-2xl p-5 shadow-xl shadow-black/40">
+
+            <div class="flex justify-between items-start mb-4">
                 <div>
-                    <span class="px-4 py-1 bg-yellow-400 text-black text-sm font-bold rounded-full">{{ sug.type }}</span>
-                    <h2 class="text-2xl font-bold mt-4">{{ sug.description }}</h2>
-                    <p class="text-emerald-400 text-lg mt-1">{{ sug.expiry }}</p>
+                    <span class="inline-block bg-yellow-400/10 text-yellow-400 border border-yellow-400/20 text-[9px] font-black tracking-widest uppercase px-2 py-1 rounded mb-3">
+                        {{ sug.strategy_type|upper }}
+                    </span>
+                    <h2 class="text-lg font-black text-white tracking-tight">{{ sug.strikes }} <span class="text-[10px] text-zinc-500 font-bold ml-1">({{ sug.dte }} DTE)</span></h2>
                 </div>
                 <div class="text-right">
-                    <div class="text-emerald-400 text-4xl font-bold">${{ sug.credit }}</div>
-                    <div class="text-xs text-zinc-400">CREDIT</div>
+                    <div class="text-2xl font-black text-emerald-400">${{ sug.credit_debit|floatformat:2 }}</div>
+                    <div class="text-[8px] text-zinc-500 font-bold tracking-widest uppercase mt-1">CREDIT</div>
                 </div>
             </div>
 
-            <div class="grid grid-cols-4 gap-6 text-center">
+            <div class="grid grid-cols-4 gap-2 mt-6 mb-4 text-center">
                 <div>
-                    <div class="text-emerald-400 text-3xl font-bold">${{ sug.max_profit }}</div>
-                    <div class="text-xs text-zinc-400">MAX PROFIT</div>
+                    <div class="text-[13px] font-black text-emerald-400">${{ sug.max_profit|floatformat:0 }}</div>
+                    <div class="text-[8px] text-zinc-600 font-bold tracking-widest uppercase mt-1">PROFIT</div>
                 </div>
                 <div>
-                    <div class="text-red-400 text-3xl font-bold">${{ sug.max_loss }}</div>
-                    <div class="text-xs text-zinc-400">MAX LOSS</div>
+                    <div class="text-[13px] font-black text-red-500">${{ sug.max_loss|floatformat:0 }}</div>
+                    <div class="text-[8px] text-zinc-600 font-bold tracking-widest uppercase mt-1">LOSS</div>
                 </div>
                 <div>
-                    <div class="text-yellow-400 text-3xl font-bold">{{ sug.rr_ratio }}</div>
-                    <div class="text-xs text-zinc-400">RR RATIO</div>
+                    <div class="text-[13px] font-black text-yellow-500">{{ sug.rr_ratio }}</div>
+                    <div class="text-[8px] text-zinc-600 font-bold tracking-widest uppercase mt-1">RR</div>
                 </div>
                 <div>
-                    <div class="text-emerald-400 text-3xl font-bold">{{ sug.probability }}</div>
-                    <div class="text-xs text-zinc-400">PROBABILITY</div>
+                    <div class="text-[13px] font-black text-emerald-400">{{ sug.probability }}</div>
+                    <div class="text-[8px] text-zinc-600 font-bold tracking-widest uppercase mt-1">PROB</div>
                 </div>
             </div>
 
-            <div class="mt-8 pt-6 border-t border-zinc-700 text-sm">
-                <p>Breakeven: <span class="font-bold">{{ sug.breakeven }}</span></p>
-                <p>Edge: <span class="text-emerald-400 font-bold">{{ sug.edge }}</span></p>
-            </div>
-
-            <!-- REAL INTERACTIVE PNL GRAPH -->
-            <div class="mt-8">
+            <div class="plotly-container mt-2 h-[130px] rounded-lg overflow-hidden border border-zinc-800/30">
                 {{ sug.plot|safe }}
             </div>
+
         </div>
         {% endfor %}
     </div>
 </div>
-</body>
-</html>
+{% endblock %}

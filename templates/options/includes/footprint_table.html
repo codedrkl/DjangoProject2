@@ -1,10 +1,31 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>$Title$</title>
-</head>
-<body>
-$END$
-</body>
-</html>
+<table class="w-full text-left text-[10px] tracking-widest uppercase">
+    <thead>
+        <tr class="text-zinc-600 border-b border-zinc-800/50">
+            <th class="pb-3 font-bold">{% if type == "bin" %}BIN{% else %}ZONE{% endif %}</th>
+            <th class="pb-3 font-bold">TYPE</th>
+            <th class="pb-3 font-bold text-right">NOTIONAL Δ</th>
+            <th class="pb-3 font-bold text-right">GROWTH</th>
+        </tr>
+    </thead>
+    <tbody class="divide-y divide-zinc-800/30">
+        {% for item in data %}
+        <tr class="hover:bg-white/5 transition-colors">
+            <td class="py-2.5 font-bold text-white">
+                {{ item.bin }}
+            </td>
+
+            <td class="py-2.5 font-black {% if item.type == 'C' %}text-red-500{% else %}text-emerald-500{% endif %}">
+                {{ item.type }}
+            </td>
+
+            <td class="py-2.5 text-right font-black {% if item.notional_m > 0 %}text-emerald-500{% else %}text-red-500{% endif %}">
+                ${{ item.notional_m|floatformat:1 }}M
+            </td>
+
+            <td class="py-2.5 text-right font-bold text-zinc-500">
+                {{ item.growth|floatformat:1 }}%
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
