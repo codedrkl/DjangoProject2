@@ -7,66 +7,44 @@ from datetime import date, timedelta
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'es_option_chain.settings')
 django.setup()
 
-from options.models import EODOptionSnapshot, OptionContract, TradeSuggestion
+from options.models import EODOptionSnapshot, OptionContract
 
+def run_timeline_audit():
+    print("\n" + "="*65)
+    print("📅 TIMELINE AUDIT: DTE VERIFICATION")
+    print("="*65 + "\n")
 
-def run_diagnostic():
-    print("" + "=" * 50)
-    print("🔍 INSTITUTIONAL DB INTEGRITY CHECK")
-    print("=" * 50 + "\n")
-
-    # A. Check Snapshots
-    snaps = EODOptionSnapshot.objects.all().order_by('-date')
-    if not snaps.exists():
-        print("❌ ERROR: No snapshots found in EODOptionSnapshot.")
+    snapshot = EODOptionSnapshot.objects.order_by('-date').first()
+    if not snapshot:
+        print("❌ No snapshots found.")
         return
 
-    latest = snaps.first()
-    print(f"✅ LATEST SNAPSHOT: {latest.date} (Price: {latest.underlying_settlement})")
+    contracts = snapshot.contracts.all().order_by('expiration')
+    if not contracts.exists():
+        print("❌ No contracts found for this snapshot.")
+        return
 
-    # B. Check 120-DTE Coverage
-    limit_date = latest.date + timedelta(days=120)
-    contracts = latest.contracts.all()
+    # A. Calculate actual DTE Range
+    first_exp = contracts.first().expiration.date()
+    last_exp = contracts.last().expiration.date()
+    max_dte = (last_exp - snapshot.date).days
 
-    total_count = contracts.count()
-    long_dated = contracts.filter(expiration__date__gte=latest.date + timedelta(days=10))
-    mar_20 = contracts.filter(expiration__date=date(2026, 3, 20))
+    print(f"📡 Snapshot Date: {snapshot.date}")
+    print(f"⏭️  Earliest Expiry: {first_exp}")
+    print(f"🏁 Furthest Expiry: {last_exp}")
+    print(f"📏 TOTAL DTE SPAN: {max_dte} days")
 
-    print(f"📊 TOTAL CONTRACTS: {total_count}")
-    print(f"📅 LONG-DATED (10+ DTE): {long_dated.count()}")
-    print(f"🎯 MARCH 20TH QUARTERLY: {mar_20.count()} contracts")
+    # B. Count distinct expiration cycles
+    exp_counts = contracts.values('expiration__date').distinct().count()
+    print(f"🗓️  DISTINCT EXPIRATIONS: {exp_counts} unique dates")
 
-    if mar_20.exists():
-        # Check Notional Density for $100k Profit Goal [cite: 2026-03-08]
-        sample = mar_20.first()
-        print(f"   - Sample Strike: {sample.strike} {sample.option_type}")
-        print(f"   - Sample OI: {sample.open_interest}")
+    # C. Verification for $100k Goal
+    if max_dte >= 115:
+        print(f"\n✅ SUCCESS: Database spans {max_dte} days. The 120-DTE window is ACTIVE.")
     else:
-        print("⚠️ WARNING: March 20th Quarterly is MISSING. Download may have failed DTE filter.")
+        print(f"\n❌ FAILURE: Database only spans {max_dte} days. You are blind to the Quarterly cycle.")
 
-    # C. Check Footprint Baseline (March 5th)
-    anchor_date = date(2026, 3, 5)
-    anchor = EODOptionSnapshot.objects.filter(date=anchor_date).first()
-    if anchor:
-        print(f"✅ ANCHOR FOUND: {anchor_date} has {anchor.contracts.count()} contracts.")
-    else:
-        print(f"❌ ANCHOR MISSING: Cannot calculate 'Change' for footprint without March 5th.")
-
-    # D. Check Scanner Cache
-    suggestions = TradeSuggestion.objects.filter(snapshot=latest)
-    print(f"🎯 CACHED SUGGESTIONS: {suggestions.count()} entries found for {latest.date}")
-
-    if suggestions.exists():
-        for sug in suggestions[:3]:
-            print(f"   - Proposal: {sug.strikes} | EV: {sug.edge} | Prob: {sug.probability}")
-
-    print("\n" + "=" * 50)
-    if mar_20.count() > 0 and anchor:
-        print("🚀 STATUS: GREEN. Data is ready for full View restoration.")
-    else:
-        print("🛠️ STATUS: RED. Run downloader for March 5th and 6th with 120-DTE scope.")
-    print("=" * 50)
-
+    print("\n" + "="*65)
 
 if __name__ == "__main__":
-    run_diagnostic()
+    run_timeline_audit()

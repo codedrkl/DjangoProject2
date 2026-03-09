@@ -1,10 +1,43 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>$Title$</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SENTINEL | Volatility Command</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #09090b; scroll-behavior: smooth; }
+        .hide-scroll::-webkit-scrollbar { display: none; }
+        .neon-border:hover { border-color: #fbbf24; box-shadow: 0 0 15px rgba(251, 191, 36, 0.1); }
+    </style>
 </head>
-<body>
-$END$
+<body class="text-zinc-100 font-mono min-h-screen">
+    <nav class="border-b border-zinc-800 bg-zinc-900/80 backdrop-blur-xl sticky top-0 z-50">
+        <div class="max-w-[1600px] mx-auto px-8 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-10">
+                <span class="text-2xl font-black tracking-tighter text-white italic">SENTINEL_AI</span>
+                <div class="flex gap-8 text-[11px] font-bold uppercase tracking-[0.2em]">
+                    <a href="/chain/" class="hover:text-yellow-400 transition-colors">01_Chain</a>
+                    <a href="/chain/outcome/" class="hover:text-yellow-400 transition-colors">02_Outcome</a>
+                    <a href="/chain/footprint/" class="hover:text-yellow-400 transition-colors">03_Footprint</a>
+                </div>
+            </div>
+            <div class="flex items-center gap-6">
+                <div class="text-[10px] text-zinc-500 uppercase text-right">
+                    <p>Account: <span class="text-white">ibkr@fz</span></p>
+                    <p>Bankroll: <span class="text-yellow-400">$100,000.00</span></p>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="max-w-[1600px] mx-auto p-8 border-t border-zinc-900 mt-12 text-[9px] text-zinc-600 uppercase tracking-widest flex justify-between">
+        <span>Target: $100k USD Profit / 1YR</span>
+        <span>Favouredzion Pty Ltd © 2026</span>
+    </footer>
 </body>
 </html>

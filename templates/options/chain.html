@@ -1,90 +1,73 @@
-<!DOCTYPE html>
-<html lang="en" class="dark">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ES Option Chain + Black-76</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        .call { color: #4ade80; }
-        .put  { color: #f87171; }
-        .strike { background: #1f2937; font-weight: 700; }
-
-        /* STICKY TABLE HEADERS THAT ACTUALLY WORK */
-        .option-table {
-            width: 100%;
-        }
-        .option-table thead th {
-            position: sticky;
-            top: 0;
-            z-index: 30;
-            background-color: #18181b;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
-        }
-    </style>
-</head>
-<body class="bg-zinc-950 text-white min-h-screen font-mono">
-<div class="max-w-7xl mx-auto p-6">
-
-    <!-- Top bar -->
-    <div class="flex justify-between items-baseline mb-10 border-b border-zinc-800 pb-6">
-        <h1 class="text-4xl font-bold">ES Futures Option Chain + Black-76</h1>
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-[1600px] mx-auto p-8">
+    <div class="flex justify-between items-end mb-8 border-b border-zinc-800 pb-6">
+        <div>
+            <h1 class="text-4xl font-black tracking-tighter uppercase text-white italic">Option Chain Explorer</h1>
+            <p class="text-zinc-500 mt-1 text-xs uppercase tracking-widest">Underlying Spot: <span class="text-emerald-400 font-bold">{{ underlying|floatformat:2 }}</span></p>
+        </div>
         <div class="text-right">
-            <p class="text-2xl">{{ snapshot.date }}</p>
-            {% if underlying %}
-            <p class="text-emerald-400 text-xl">ES Future: {{ underlying|floatformat:2 }}</p>
-            {% endif %}
+            <span class="text-[10px] bg-zinc-800 px-3 py-1 rounded-full text-zinc-400 font-bold uppercase tracking-tighter">Click Bar to Toggle</span>
         </div>
     </div>
 
-    {% for exp, rows in chain_data.items %}
-    <div class="mb-12">
-        <details class="group" open>
-            <summary class="flex justify-between bg-zinc-900 px-6 py-4 rounded-2xl cursor-pointer hover:bg-zinc-800">
-                <span class="text-2xl font-bold text-yellow-400">{{ exp|date:"l, F j, Y" }} ({{ exp|timeuntil }})</span>
-                <span class="text-3xl transition group-open:rotate-180">▼</span>
-            </summary>
-
-            <div class="mt-4 overflow-x-auto">
-                <table class="option-table text-sm">
-                    <thead>
-                        <tr>
-                            <th class="p-4 text-right call">Call Vol</th>
-                            <th class="p-4 text-right call">Call OI</th>
-                            <th class="p-4 text-right call">Call Settle</th>
-                            <th class="p-4 text-right call">Call IV</th>
-                            <th class="p-4 text-right call">Call Δ</th>
-                            <th class="p-4 text-center strike text-yellow-300">STRIKE</th>
-                            <th class="p-4 text-left put">Put Δ</th>
-                            <th class="p-4 text-left put">Put IV</th>
-                            <th class="p-4 text-left put">Put Settle</th>
-                            <th class="p-4 text-left put">Put OI</th>
-                            <th class="p-4 text-left put">Put Vol</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-zinc-700">
-                        {% for row in rows %}
-                        <tr>
-                            <td class="p-4 text-right call">{{ row.call.volume|default:"—" }}</td>
-                            <td class="p-4 text-right call">{{ row.call.open_interest|default:"—" }}</td>
-                            <td class="p-4 text-right call font-bold">{{ row.call.settlement|floatformat:2|default:"—" }}</td>
-                            <td class="p-4 text-right call">{{ row.call.implied_vol|floatformat:1|default:"—" }}%</td>
-                            <td class="p-4 text-right call font-bold">{{ row.call.delta|floatformat:3|default:"—" }}</td>
-                            <td class="p-4 text-center strike text-lg">{{ row.strike }}</td>
-                            <td class="p-4 text-left put font-bold">{{ row.put.delta|floatformat:3|default:"—" }}</td>
-                            <td class="p-4 text-left put">{{ row.put.implied_vol|floatformat:1|default:"—" }}%</td>
-                            <td class="p-4 text-left put font-bold">{{ row.put.settlement|floatformat:2|default:"—" }}</td>
-                            <td class="p-4 text-left put">{{ row.put.open_interest|default:"—" }}</td>
-                            <td class="p-4 text-left put">{{ row.put.volume|default:"—" }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+    {% for exp, strikes in chain_data.items %}
+    <details class="group mb-4 bg-zinc-900/40 rounded-2xl border border-zinc-800 overflow-hidden" {% if forloop.first %}open{% endif %}>
+        <summary class="flex items-center justify-between px-6 py-5 cursor-pointer list-none bg-zinc-800/40 hover:bg-zinc-800/80 transition-all select-none">
+            <div class="flex items-center gap-6">
+                <span class="text-xl font-black text-yellow-400 uppercase tracking-tighter">
+                    {{ exp|date:"d M Y" }}
+                </span>
+                <span class="px-3 py-1 rounded-md bg-zinc-900 text-zinc-400 text-[10px] font-black uppercase border border-zinc-700">
+                    {{ strikes.0.call.dte }} DTE
+                </span>
             </div>
-        </details>
-    </div>
-    {% endfor %}
 
+            <div class="flex items-center gap-3">
+                <span class="text-[9px] font-bold text-zinc-600 uppercase group-open:hidden">Expand</span>
+                <span class="text-[9px] font-bold text-zinc-600 uppercase hidden group-open:block">Collapse</span>
+                <svg class="w-4 h-4 text-zinc-500 transition-transform duration-300 group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7" />
+                </svg>
+            </div>
+        </summary>
+
+        <div class="border-t border-zinc-800 bg-black/20">
+            <table class="w-full text-center text-[11px]">
+                <thead class="bg-zinc-950 text-zinc-500 uppercase tracking-widest text-[9px]">
+                    <tr>
+                        <th class="py-4">Delta</th>
+                        <th class="py-4">OI</th>
+                        <th class="py-4">Settle</th>
+                        <th class="py-4 bg-zinc-900 text-white font-black w-32 border-x border-zinc-800">STRIKE</th>
+                        <th class="py-4">Settle</th>
+                        <th class="py-4">OI</th>
+                        <th class="py-4">Delta</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-zinc-800/30">
+                    {% for row in strikes %}
+                    <tr class="hover:bg-yellow-400/5 transition-colors group/row">
+                        <td class="py-2.5 text-zinc-500">{{ row.call.delta|floatformat:2 }}</td>
+                        <td class="py-2.5 text-zinc-600">{{ row.call.open_interest|floatformat:0 }}</td>
+                        <td class="py-2.5 text-emerald-400 font-bold">{{ row.call.settlement|floatformat:2 }}</td>
+                        <td class="py-2.5 bg-zinc-900/30 text-white font-black text-sm border-x border-zinc-800 group-hover/row:text-yellow-400">{{ row.strike|floatformat:0 }}</td>
+                        <td class="py-2.5 text-red-400 font-bold">{{ row.put.settlement|floatformat:2 }}</td>
+                        <td class="py-2.5 text-zinc-600">{{ row.put.open_interest|floatformat:0 }}</td>
+                        <td class="py-2.5 text-zinc-500">{{ row.put.delta|floatformat:2 }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </details>
+    {% endfor %}
 </div>
-</body>
-</html>
+
+<style>
+    /* Force hide standard browser markers */
+    summary::-webkit-details-marker { display: none !important; }
+    summary { list-style: none !important; }
+    summary:focus { outline: none; }
+</style>
+{% endblock %}

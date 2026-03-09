@@ -1,21 +1,16 @@
 {% extends 'base.html' %}
 
 {% block content %}
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js" charset="utf-8"></script>
+
 <style>
-    /* Force Plotly to respect the CSS grid constraints and prevent overflow */
-    .plotly-container { width: 100% !important; overflow: hidden; }
-    .plotly-container .js-plotly-plot,
-    .plotly-container .plot-container,
-    .plotly-container svg.main-svg {
-        width: 100% !important;
-        max-width: 100% !important;
-    }
+    .plotly-container { width: 100% !important; overflow: hidden; min-height: 150px; }
+    .plotly-container .js-plotly-plot { width: 100% !important; }
 </style>
 
 <div class="bg-[#0B0F19] min-h-screen p-8 font-sans">
-
     <div class="flex justify-between items-center mb-8">
-        <h1 class="text-3xl font-black text-white tracking-tighter">Outcome <span class="text-zinc-500 font-normal">• Sentinel Scanner</span></h1>
+        <h1 class="text-3xl font-black text-white tracking-tighter">Outcome • Sentinel Scanner</h1>
         <div class="text-zinc-500 text-[10px] font-bold tracking-widest uppercase">
             ES Future: <span class="text-emerald-400 text-sm ml-1">{{ underlying|floatformat:2 }}</span>
         </div>
@@ -23,72 +18,122 @@
 
     <div class="bg-[#111621] border border-zinc-800 rounded-2xl p-4 mb-8 flex flex-wrap items-end gap-6 shadow-lg shadow-black/50">
         <div>
-            <label class="block text-[9px] text-zinc-500 uppercase tracking-widest font-bold mb-2">1. Expiry (DTE)</label>
-            <select class="bg-black border border-zinc-800 text-zinc-300 text-xs font-bold rounded p-2 outline-none w-32 focus:border-zinc-500">
-                <option>All Expiries</option>
+            <label for="filter-dte" class="block text-[9px] text-zinc-500 uppercase tracking-widest font-bold mb-2">1. Expiry (DTE)</label>
+            <select id="filter-dte" class="bg-black border border-zinc-800 text-zinc-300 text-xs font-bold rounded p-2 outline-none w-32 focus:border-zinc-500">
+                <option value="All">All Expiries</option>
             </select>
         </div>
         <div>
-            <label class="block text-[9px] text-zinc-500 uppercase tracking-widest font-bold mb-2">2. Width</label>
-            <select class="bg-black border border-zinc-800 text-zinc-300 text-xs font-bold rounded p-2 outline-none w-32 focus:border-zinc-500">
-                <option>All Widths</option>
+            <label for="filter-width" class="block text-[9px] text-zinc-500 uppercase tracking-widest font-bold mb-2">2. Width</label>
+            <select id="filter-width" class="bg-black border border-zinc-800 text-zinc-300 text-xs font-bold rounded p-2 outline-none w-32 focus:border-zinc-500">
+                <option value="All">All Widths</option>
             </select>
         </div>
         <div>
-            <label class="block text-[9px] text-zinc-500 uppercase tracking-widest font-bold mb-2">3. Min Prob (%)</label>
-            <input type="text" placeholder="e.g. 8" class="bg-black border border-zinc-800 text-zinc-300 text-xs font-bold rounded p-2 outline-none w-24 focus:border-zinc-500">
+            <label for="filter-prob" class="block text-[9px] text-zinc-500 uppercase tracking-widest font-bold mb-2">3. Min Prob (%)</label>
+            <input id="filter-prob" type="number" placeholder="e.g. 80" class="bg-black border border-zinc-800 text-zinc-300 text-xs font-bold rounded p-2 outline-none w-24 focus:border-zinc-500">
         </div>
         <div>
-            <label class="block text-[9px] text-zinc-500 uppercase tracking-widest font-bold mb-2">4. Max Credit ($)</label>
-            <input type="text" placeholder="50.0" class="bg-black border border-zinc-800 text-zinc-300 text-xs font-bold rounded p-2 outline-none w-24 focus:border-zinc-500">
+            <label for="filter-credit" class="block text-[9px] text-zinc-500 uppercase tracking-widest font-bold mb-2">4. Max Credit ($)</label>
+            <input id="filter-credit" type="number" step="0.25" placeholder="50.0" class="bg-black border border-zinc-800 text-zinc-300 text-xs font-bold rounded p-2 outline-none w-24 focus:border-zinc-500">
         </div>
         <div class="ml-auto">
-            <button class="text-[9px] text-zinc-600 hover:text-zinc-300 uppercase tracking-widest font-bold transition-colors">Reset All</button>
+            <button id="reset-filters" class="text-[9px] text-zinc-600 hover:text-zinc-300 uppercase tracking-widest font-bold transition-colors">Reset All</button>
         </div>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="outcome-grid">
         {% for sug in suggestions %}
-        <div class="bg-[#151923] border border-zinc-800/80 rounded-2xl p-5 shadow-xl shadow-black/40">
+        <div class="trade-card bg-[#151923] border border-zinc-800/80 rounded-2xl p-5 shadow-xl shadow-black/40"
+             data-dte="{{ sug.dte|stringformat:'s' }}"
+             data-strikes="{{ sug.strikes }}"
+             data-prob="{{ sug.probability|slice:':-1' }}"
+             data-credit="{{ sug.credit_debit }}">
 
             <div class="flex justify-between items-start mb-4">
                 <div>
-                    <span class="inline-block bg-yellow-400/10 text-yellow-400 border border-yellow-400/20 text-[9px] font-black tracking-widest uppercase px-2 py-1 rounded mb-3">
+                    <span class="inline-block bg-purple-400/10 text-purple-400 border border-purple-400/20 text-[9px] font-black tracking-widest uppercase px-2 py-1 rounded mb-3">
                         {{ sug.strategy_type|upper }}
                     </span>
                     <h2 class="text-lg font-black text-white tracking-tight">{{ sug.strikes }} <span class="text-[10px] text-zinc-500 font-bold ml-1">({{ sug.dte }} DTE)</span></h2>
                 </div>
-                <div class="text-right">
-                    <div class="text-2xl font-black text-emerald-400">${{ sug.credit_debit|floatformat:2 }}</div>
-                    <div class="text-[8px] text-zinc-500 font-bold tracking-widest uppercase mt-1">CREDIT</div>
-                </div>
+                <div class="text-right font-black text-emerald-400 text-2xl">${{ sug.credit_debit|floatformat:2 }}</div>
             </div>
 
-            <div class="grid grid-cols-4 gap-2 mt-6 mb-4 text-center">
-                <div>
-                    <div class="text-[13px] font-black text-emerald-400">${{ sug.max_profit|floatformat:0 }}</div>
-                    <div class="text-[8px] text-zinc-600 font-bold tracking-widest uppercase mt-1">PROFIT</div>
-                </div>
-                <div>
-                    <div class="text-[13px] font-black text-red-500">${{ sug.max_loss|floatformat:0 }}</div>
-                    <div class="text-[8px] text-zinc-600 font-bold tracking-widest uppercase mt-1">LOSS</div>
-                </div>
-                <div>
-                    <div class="text-[13px] font-black text-yellow-500">{{ sug.rr_ratio }}</div>
-                    <div class="text-[8px] text-zinc-600 font-bold tracking-widest uppercase mt-1">RR</div>
-                </div>
-                <div>
-                    <div class="text-[13px] font-black text-emerald-400">{{ sug.probability }}</div>
-                    <div class="text-[8px] text-zinc-600 font-bold tracking-widest uppercase mt-1">PROB</div>
-                </div>
+            <div class="grid grid-cols-4 gap-2 text-center my-4">
+                <div><div class="text-emerald-400 font-black">${{ sug.max_profit|floatformat:0 }}</div><div class="text-[8px] text-zinc-600 font-bold">PROFIT</div></div>
+                <div><div class="text-red-500 font-black">${{ sug.max_loss|floatformat:0 }}</div><div class="text-[8px] text-zinc-600 font-bold">LOSS</div></div>
+                <div><div class="text-yellow-500 font-black">{{ sug.rr_ratio }}</div><div class="text-[8px] text-zinc-600 font-bold">RR</div></div>
+                <div><div class="text-emerald-400 font-black">{{ sug.probability }}</div><div class="text-[8px] text-zinc-600 font-bold">PROB</div></div>
             </div>
 
-            <div class="plotly-container mt-2 h-[130px] rounded-lg overflow-hidden border border-zinc-800/30">
+            <div class="plotly-container mt-2">
                 {{ sug.plot|safe }}
             </div>
-
         </div>
         {% endfor %}
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const dteSelect = document.getElementById('filter-dte');
+    const widthSelect = document.getElementById('filter-width');
+    const cards = document.querySelectorAll('.trade-card');
+
+    let dteSet = new Set();
+    let widthSet = new Set();
+
+    cards.forEach(card => {
+        // Fix: Explicitly treat DTE as string to avoid type coercion warnings
+        const d = String(card.getAttribute('data-dte'));
+        if (d && d !== 'None') dteSet.add(d);
+
+        const s = card.getAttribute('data-strikes');
+        const nums = s.match(/[\d.]+/g);
+        if (nums && nums.length >= 2) {
+            const w = Math.abs(parseFloat(nums[0]) - parseFloat(nums[1])).toString();
+            card.setAttribute('data-width', w);
+            widthSet.add(w);
+        }
+    });
+
+    // Populate Dropdowns
+    const populate = (select, items, label) => {
+        let html = `<option value="All">All ${label}</option>`;
+        Array.from(items).sort((a, b) => parseFloat(a) - parseFloat(b)).forEach(item => {
+            html += `<option value="${item}">${item} ${label === 'Expiries' ? 'DTE' : '$'}</option>`;
+        });
+        select.innerHTML = html;
+    };
+
+    populate(dteSelect, dteSet, 'Expiries');
+    populate(widthSelect, widthSet, 'Widths');
+
+    const runFilters = () => {
+        const fDte = dteSelect.value;
+        const fWidth = widthSelect.value;
+        const minP = parseFloat(document.getElementById('filter-prob').value) || 0;
+        const maxC = parseFloat(document.getElementById('filter-credit').value) || 99999;
+
+        cards.forEach(card => {
+            const cDte = card.getAttribute('data-dte');
+            const cWidth = card.getAttribute('data-width');
+            const cProb = parseFloat(card.getAttribute('data-prob')) || 0;
+            const cCredit = parseFloat(card.getAttribute('data-credit')) || 0;
+
+            const mDte = (fDte === 'All' || fDte === cDte);
+            const mWidth = (fWidth === 'All' || fWidth === cWidth);
+            const mProb = (cProb >= minP);
+            const mCredit = (cCredit <= maxC);
+
+            card.style.display = (mDte && mWidth && mProb && mCredit) ? 'block' : 'none';
+        });
+    };
+
+    [dteSelect, widthSelect].forEach(el => el.addEventListener('change', runFilters));
+    ['filter-prob', 'filter-credit'].forEach(id => document.getElementById(id).addEventListener('input', runFilters));
+    document.getElementById('reset-filters').addEventListener('click', () => location.reload());
+});
+</script>
 {% endblock %}
