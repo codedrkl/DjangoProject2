@@ -1,43 +1,57 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SENTINEL | Volatility Command</title>
+    <title>Sentinel Chain</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        zinc: {
+                            950: '#09090b',
+                            900: '#18181b',
+                            800: '#27272a',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
     <style>
-        body { background-color: #09090b; scroll-behavior: smooth; }
-        .hide-scroll::-webkit-scrollbar { display: none; }
-        .neon-border:hover { border-color: #fbbf24; box-shadow: 0 0 15px rgba(251, 191, 36, 0.1); }
+        body { background-color: #09090b; color: #e4e4e7; }
     </style>
 </head>
-<body class="text-zinc-100 font-mono min-h-screen">
-    <nav class="border-b border-zinc-800 bg-zinc-900/80 backdrop-blur-xl sticky top-0 z-50">
-        <div class="max-w-[1600px] mx-auto px-8 py-4 flex justify-between items-center">
-            <div class="flex items-center gap-10">
-                <span class="text-2xl font-black tracking-tighter text-white italic">SENTINEL_AI</span>
-                <div class="flex gap-8 text-[11px] font-bold uppercase tracking-[0.2em]">
-                    <a href="/chain/" class="hover:text-yellow-400 transition-colors">01_Chain</a>
-                    <a href="/chain/outcome/" class="hover:text-yellow-400 transition-colors">02_Outcome</a>
-                    <a href="/chain/footprint/" class="hover:text-yellow-400 transition-colors">03_Footprint</a>
-                </div>
+<body class="antialiased min-h-screen selection:bg-yellow-400/30">
+    <nav class="border-b border-zinc-800 bg-zinc-950/80 backdrop-blur sticky top-0 z-50">
+        <div class="max-w-[1600px] mx-auto px-8 py-4 flex items-center justify-between">
+            <div class="text-xl font-black italic tracking-tighter uppercase text-white">
+                FZ<span class="text-yellow-400">.Sentinel</span>
             </div>
-            <div class="flex items-center gap-6">
-                <div class="text-[10px] text-zinc-500 uppercase text-right">
-                    <p>Account: <span class="text-white">ibkr@fz</span></p>
-                    <p>Bankroll: <span class="text-yellow-400">$100,000.00</span></p>
-                </div>
+
+            <div class="flex gap-6 text-sm font-bold uppercase tracking-widest text-zinc-500">
+                <a href="{% url 'options:option_chain' %}"
+                   class="transition-colors hover:text-white {% if request.resolver_match.url_name == 'option_chain' %}text-white{% endif %}">
+                    Chain
+                </a>
+                <a href="{% url 'options:outcome_view' %}"
+                   class="transition-colors hover:text-yellow-400 {% if request.resolver_match.url_name == 'outcome_view' %}text-yellow-400{% endif %}">
+                    Outcomes
+                </a>
+                <a href="{% url 'options:footprint_view' %}"
+                   class="transition-colors hover:text-cyan-400 {% if request.resolver_match.url_name == 'footprint_view' %}text-cyan-400{% endif %}">
+                    Footprint
+                </a>
             </div>
         </div>
     </nav>
 
     <main>
-        {% block content %}{% endblock %}
+        {% block content %}
+        {% endblock %}
     </main>
-
-    <footer class="max-w-[1600px] mx-auto p-8 border-t border-zinc-900 mt-12 text-[9px] text-zinc-600 uppercase tracking-widest flex justify-between">
-        <span>Target: $100k USD Profit / 1YR</span>
-        <span>Favouredzion Pty Ltd © 2026</span>
-    </footer>
 </body>
 </html>

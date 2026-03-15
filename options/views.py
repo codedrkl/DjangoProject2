@@ -11,7 +11,7 @@ def option_chain(request):
     snapshot = OptionChainSnapshot.objects.order_by('-timestamp').first()
 
     if not snapshot:
-        return render(request, 'chain.html', {'chain_data': {}, 'underlying': 0.0})
+        return render(request, 'options/chain.html', {'chain_data': {}, 'underlying': 0.0})
 
     underlying = float(snapshot.underlying_price or 0.0)
 
@@ -82,15 +82,19 @@ def outcome_view(request):
 def footprint_view(request):
     """
     Renders the temporal institutional footprint bins.
+    Corrected: select_related moved to the Bin level.
     """
-    # Get the most recent snapshot that has bins calculated
-    snapshot = OptionChainSnapshot.objects.filter(bins__isnull=False).distinct().order_by('-timestamp').first()
+    # 1. Get the latest snapshot that has bins
+    snapshot = OptionChainSnapshot.objects.filter(bins__isnull=False)\
+        .distinct()\
+        .order_by('-timestamp')\
+        .first()
 
     if not snapshot:
         return render(request, 'options/footprint.html', {'snapshot': None, 'bins': []})
 
-    # Fetch bins categorized by Weekly, Monthly, Quarterly
-    bins = snapshot.bins.annotate(
+    # 2. Optimization: Fetch bins AND their reference snapshots in one hit
+    bins = snapshot.bins.select_related('ref_snapshot').annotate(
         sort_order=Case(
             When(bin_type='WEEKLY', then=Value(1)),
             When(bin_type='MONTHLY', then=Value(2)),

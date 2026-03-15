@@ -100,6 +100,8 @@ class FootprintBin(models.Model):
     notional_delta = models.FloatField(default=0.0)
     growth = models.FloatField(default=0.0)
     volume_filter_met = models.BooleanField(default=False)
+    # NEW: Stores top 3-5 institutional walls for this bin/zone (Finesse)
+    top_walls = models.JSONField(default=list)
 
     class Meta:
         ordering = ['bin_type', 'zone']

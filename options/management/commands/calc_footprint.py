@@ -4,7 +4,7 @@ from options.models import OptionChainSnapshot, FootprintBin
 
 
 class Command(BaseCommand):
-    help = 'Aggregates Institutional Footprint vs Reference Friday'
+    help = 'Aggregates Institutional Footprint vs Reference Friday with Strike Granularity'
 
     def add_arguments(self, parser):
         parser.add_argument('--ref-date', type=str, help='YYYY-MM-DD of the anchor Friday', default='2026-03-06')
@@ -12,7 +12,6 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         ref_date = options['ref_date']
         curr = OptionChainSnapshot.objects.order_by('-timestamp').first()
-        # Find the specific Friday anchor
         ref = OptionChainSnapshot.objects.filter(date=ref_date, label='EOD').first()
 
         if not curr or not ref:
@@ -34,8 +33,7 @@ class Command(BaseCommand):
 
         for code, d_min, d_max in bins:
             # Aggregate current institutional flow
-            # Using Absolute Delta to measure "Total Exposure Weight"
-            curr_data = curr.contracts.filter(dte__range=(d_min, d_max)).annotate(
+            curr_data_all = curr.contracts.filter(dte__range=(d_min, d_max)).annotate(
                 notional=F('strike') * F('open_interest') * ES_MULTIPLIER
             ).filter(notional__gte=INSTITUTIONAL_THRESHOLD)
 
@@ -45,27 +43,43 @@ class Command(BaseCommand):
                 zone_filter = Q(strike__range=(spot * 0.98, spot * 1.02)) if zone == 'ATM' else ~Q(
                     strike__range=(spot * 0.98, spot * 1.02))
 
-                curr_zone = curr_data.filter(zone_filter).aggregate(
+                curr_zone_qs = curr_data_all.filter(zone_filter)
+
+                # 1. Calculate Aggregate Weights
+                curr_zone_weight = curr_zone_qs.aggregate(
                     total_delta_weight=Sum(F('strike') * F('open_interest') * F('delta'))
                 )['total_delta_weight'] or 0.0
 
-                # Compare against Reference Friday
-                ref_zone = ref.contracts.filter(dte__range=(d_min, d_max)).filter(zone_filter).annotate(
+                # 2. Extract Top 3 Granular Walls (Strikes)
+                # We sort by absolute notional to find the biggest "Pins" or "Walls"
+                top_strikes_qs = curr_zone_qs.order_by('-notional')[:3]
+                walls_metadata = []
+                for contract in top_strikes_qs:
+                    walls_metadata.append({
+                        'strike': int(contract.strike),
+                        'type': contract.option_type,
+                        'oi': contract.open_interest,
+                        'notional_m': round((contract.strike * contract.open_interest * ES_MULTIPLIER) / 1_000_000, 1)
+                    })
+
+                # 3. Reference Friday Comparison
+                ref_zone_weight = ref.contracts.filter(dte__range=(d_min, d_max)).filter(zone_filter).annotate(
                     notional=F('strike') * F('open_interest') * ES_MULTIPLIER
                 ).filter(notional__gte=INSTITUTIONAL_THRESHOLD).aggregate(
                     total_delta_weight=Sum(F('strike') * F('open_interest') * F('delta'))
                 )['total_delta_weight'] or 0.0
 
-                growth = curr_zone - ref_zone
+                growth = curr_zone_weight - ref_zone_weight
 
                 FootprintBin.objects.create(
                     snapshot=curr,
                     ref_snapshot=ref,
                     bin_type=code,
                     zone=zone,
-                    notional_delta=curr_zone / 1_000_000,
+                    notional_delta=curr_zone_weight / 1_000_000,
                     growth=growth / 1_000_000,
-                    volume_filter_met=True
+                    volume_filter_met=True,
+                    top_walls=walls_metadata  # Inject the granular finesse
                 )
 
-        self.stdout.write(self.style.SUCCESS("✅ Institutional Footprint Synced vs Anchor."))
+        self.stdout.write(self.style.SUCCESS("✅ Institutional Footprint + Granular Walls Synced."))

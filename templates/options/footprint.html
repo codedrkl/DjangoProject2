@@ -7,7 +7,7 @@
         <div class="flex items-center gap-4">
             <h1 class="text-2xl font-black uppercase italic tracking-tighter text-white">Institutional <span class="text-yellow-400">Footprint</span></h1>
             <span class="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-600 px-3 py-1 bg-zinc-900 rounded-full border border-zinc-800">
-                Anchor: VS {{ snapshot.ref_snapshot.date|default:"Previous" }}
+                Anchor: VS {{ bins.0.ref_snapshot.date|default:"Previous" }}
             </span>
         </div>
         <div class="text-right">
@@ -17,19 +17,19 @@
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-        
+
         {% regroup bins by get_bin_type_display as bin_list %}
-        
+
         {% for group in bin_list %}
         <div class="bg-[#09090b] border border-zinc-800 rounded-2xl p-8 shadow-2xl hover:border-zinc-700 transition-all group">
             <div class="flex justify-between items-center mb-8">
-                <h3 class="text-xs font-black uppercase tracking-[0.2em] 
+                <h3 class="text-xs font-black uppercase tracking-[0.2em]
                            {% if 'WEEKLY' in group.grouper %}text-yellow-400{% elif 'MONTHLY' in group.grouper %}text-emerald-400{% else %}text-purple-400{% endif %}">
                     {{ group.grouper }}
                 </h3>
                 <div class="h-px flex-grow mx-4 bg-zinc-900 group-hover:bg-zinc-800 transition-colors"></div>
             </div>
-            
+
             <table class="w-full text-left">
                 <thead>
                     <tr class="text-[9px] font-black text-zinc-600 uppercase tracking-widest border-b border-zinc-900">
@@ -42,15 +42,25 @@
                 <tbody class="text-[11px] font-bold font-mono">
                     {% for item in group.list %}
                     <tr class="border-b border-zinc-900/30 hover:bg-zinc-900/10 transition-colors">
-                        <td class="py-5 {% if item.zone == 'ATM' %}text-zinc-100{% else %}text-zinc-500{% endif %}">
-                            {{ item.zone }}
+                        <td class="py-5">
+                            <span class="{% if item.zone == 'ATM' %}text-zinc-100{% else %}text-zinc-500{% endif %}">
+                                {{ item.zone }}
+                            </span>
+
+                            <div class="flex flex-wrap gap-1.5 mt-2">
+                                {% for wall in item.top_walls %}
+                                <span class="text-[8px] font-black bg-zinc-900 px-1.5 py-0.5 rounded border border-zinc-800 text-zinc-600 group-hover:text-zinc-400 transition-colors">
+                                    {{ wall.strike }}{{ wall.type }}
+                                </span>
+                                {% endfor %}
+                            </div>
                         </td>
                         <td class="py-5 text-zinc-700 text-[9px] font-black italic uppercase">Dealer</td>
                         <td class="py-5 text-right text-white">
-                            {{ item.notional_delta|floatformat:2 }}<span class="text-[9px] text-zinc-600 ml-0.5">M</span>
+                            {{ item.notional_delta|floatformat:1 }}<span class="text-[9px] text-zinc-600 ml-0.5">M</span>
                         </td>
                         <td class="py-5 text-right {% if item.growth > 0 %}text-emerald-500{% elif item.growth < 0 %}text-red-500{% else %}text-zinc-700{% endif %}">
-                            {% if item.growth > 0 %}+{% endif %}{{ item.growth|floatformat:2 }}<span class="text-[9px] ml-0.5 opacity-60">M</span>
+                            {% if item.growth > 0 %}+{% endif %}{{ item.growth|floatformat:1 }}<span class="text-[9px] ml-0.5 opacity-60">M</span>
                         </td>
                     </tr>
                     {% endfor %}

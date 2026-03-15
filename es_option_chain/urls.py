@@ -19,5 +19,6 @@ from django.urls import path, include
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('chain/', include('options.urls')),
+    # 🚀 ENFORCE NAMESPACE INHERITANCE
+    path('', include('options.urls')),
 ]

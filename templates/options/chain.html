@@ -1,60 +1,80 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="max-w-[1600px] mx-auto p-8">
+<div class="max-w-[1600px] mx-auto p-8 font-sans">
     <div class="flex justify-between items-end mb-8 border-b border-zinc-800 pb-6">
         <div>
-            <h1 class="text-4xl font-black tracking-tighter uppercase text-white italic">Option Chain Explorer</h1>
-            <p class="text-zinc-500 mt-1 text-xs uppercase tracking-widest">Underlying Spot: <span class="text-emerald-400 font-bold">{{ underlying|floatformat:2 }}</span></p>
+            <h1 class="text-4xl font-black tracking-tighter uppercase text-white italic">Options Chain Matrix</h1>
+            <p class="text-zinc-500 mt-1 text-xs uppercase tracking-widest">
+                Underlying Spot: <span class="text-emerald-400 font-bold ml-2">{{ underlying|floatformat:2 }}</span>
+            </p>
         </div>
         <div class="text-right">
-            <span class="text-[10px] bg-zinc-800 px-3 py-1 rounded-full text-zinc-400 font-bold uppercase tracking-tighter">Click Bar to Toggle</span>
+            <span class="text-[10px] bg-zinc-800 px-3 py-1 rounded-full text-zinc-400 font-bold uppercase tracking-tighter">Click Expiration to Expand</span>
         </div>
     </div>
 
     {% for exp, strikes in chain_data.items %}
-    <details class="group mb-4 bg-zinc-900/40 rounded-2xl border border-zinc-800 overflow-hidden" {% if forloop.first %}open{% endif %}>
-        <summary class="flex items-center justify-between px-6 py-5 cursor-pointer list-none bg-zinc-800/40 hover:bg-zinc-800/80 transition-all select-none">
-            <div class="flex items-center gap-6">
-                <span class="text-xl font-black text-yellow-400 uppercase tracking-tighter">
+    <details class="group mb-2 bg-zinc-950 rounded-lg border border-zinc-800 overflow-hidden" {% if forloop.first %}open{% endif %}>
+        <summary class="flex items-center justify-between px-4 py-3 cursor-pointer list-none bg-zinc-900 hover:bg-zinc-800 transition-colors select-none">
+            <div class="flex items-center gap-4">
+                <svg class="w-4 h-4 text-zinc-500 transition-transform duration-200 group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9 5l7 7-7 7" />
+                </svg>
+                <span class="text-lg font-bold text-white uppercase tracking-tight">
                     {{ exp|date:"d M Y" }}
                 </span>
-                <span class="px-3 py-1 rounded-md bg-zinc-900 text-zinc-400 text-[10px] font-black uppercase border border-zinc-700">
-                    {{ strikes.0.call.dte }} DTE
+                <span class="px-2 py-0.5 rounded bg-zinc-800 text-yellow-400 text-[11px] font-black uppercase border border-zinc-700">
+                    {{ strikes.0.dte }} DTE
                 </span>
-            </div>
-
-            <div class="flex items-center gap-3">
-                <span class="text-[9px] font-bold text-zinc-600 uppercase group-open:hidden">Expand</span>
-                <span class="text-[9px] font-bold text-zinc-600 uppercase hidden group-open:block">Collapse</span>
-                <svg class="w-4 h-4 text-zinc-500 transition-transform duration-300 group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7" />
-                </svg>
             </div>
         </summary>
 
-        <div class="border-t border-zinc-800 bg-black/20">
-            <table class="w-full text-center text-[11px]">
-                <thead class="bg-zinc-950 text-zinc-500 uppercase tracking-widest text-[9px]">
+        <div class="border-t border-zinc-800 overflow-x-auto max-h-[600px] overflow-y-auto">
+            <table class="w-full text-[12px] font-mono whitespace-nowrap">
+                <thead class="bg-zinc-900 text-zinc-400 uppercase tracking-wider text-[10px] sticky top-0 z-10 border-b border-zinc-700 shadow-md">
                     <tr>
-                        <th class="py-4">Delta</th>
-                        <th class="py-4">OI</th>
-                        <th class="py-4">Settle</th>
-                        <th class="py-4 bg-zinc-900 text-white font-black w-32 border-x border-zinc-800">STRIKE</th>
-                        <th class="py-4">Settle</th>
-                        <th class="py-4">OI</th>
-                        <th class="py-4">Delta</th>
+                        <th colspan="3" class="py-2 text-center border-r border-zinc-800 bg-zinc-900/90 backdrop-blur">CALLS</th>
+                        <th class="py-2 text-center bg-zinc-800 text-white w-24 border-r border-zinc-800">STRIKE</th>
+                        <th colspan="3" class="py-2 text-center bg-zinc-900/90 backdrop-blur">PUTS</th>
+                    </tr>
+                    <tr class="border-b border-zinc-800">
+                        <th class="py-2 px-4 text-right border-r border-zinc-800/50">Delta</th>
+                        <th class="py-2 px-4 text-right border-r border-zinc-800/50">OI</th>
+                        <th class="py-2 px-4 text-right border-r border-zinc-800">Settle</th>
+                        <th class="py-2 px-4 text-center bg-zinc-800 border-r border-zinc-800"></th>
+                        <th class="py-2 px-4 text-right border-r border-zinc-800/50">Settle</th>
+                        <th class="py-2 px-4 text-right border-r border-zinc-800/50">OI</th>
+                        <th class="py-2 px-4 text-right">Delta</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-zinc-800/30">
+                <tbody class="divide-y divide-zinc-800/50">
                     {% for row in strikes %}
-                    <tr class="hover:bg-yellow-400/5 transition-colors group/row">
-                        <td class="py-2.5 text-zinc-500">{{ row.call.delta|floatformat:2 }}</td>
-                        <td class="py-2.5 text-zinc-600">{{ row.call.open_interest|floatformat:0 }}</td>
-                        <td class="py-2.5 text-emerald-400 font-bold">{{ row.call.settlement|floatformat:2 }}</td>
-                        <td class="py-2.5 bg-zinc-900/30 text-white font-black text-sm border-x border-zinc-800 group-hover/row:text-yellow-400">{{ row.strike|floatformat:0 }}</td>
-                        <td class="py-2.5 text-red-400 font-bold">{{ row.put.settlement|floatformat:2 }}</td>
-                        <td class="py-2.5 text-zinc-600">{{ row.put.open_interest|floatformat:0 }}</td>
-                        <td class="py-2.5 text-zinc-500">{{ row.put.delta|floatformat:2 }}</td>
+                    <tr class="hover:bg-yellow-400/10 transition-colors group/row">
+
+                        <td class="py-1 px-4 text-right text-zinc-500 border-r border-zinc-800/50 {% if row.strike < underlying %}bg-cyan-900/20{% else %}bg-zinc-950{% endif %}">
+                            {{ row.call.delta|default:"-"|floatformat:2 }}
+                        </td>
+                        <td class="py-1 px-4 text-right text-zinc-400 border-r border-zinc-800/50 {% if row.strike < underlying %}bg-cyan-900/20{% else %}bg-zinc-950{% endif %}">
+                            {{ row.call.open_interest|default:"-"|floatformat:0 }}
+                        </td>
+                        <td class="py-1 px-4 text-right text-emerald-400 font-bold border-r border-zinc-800 {% if row.strike < underlying %}bg-cyan-900/20{% else %}bg-zinc-950{% endif %}">
+                            {{ row.call.settlement|default:"0.00"|floatformat:2 }}
+                        </td>
+
+                        <td class="py-1 px-4 text-center bg-zinc-800 text-white font-black text-sm border-r border-zinc-800 group-hover/row:text-yellow-400">
+                            {{ row.strike|floatformat:0 }}
+                        </td>
+
+                        <td class="py-1 px-4 text-right text-red-400 font-bold border-r border-zinc-800/50 {% if row.strike > underlying %}bg-cyan-900/20{% else %}bg-zinc-950{% endif %}">
+                            {{ row.put.settlement|default:"0.00"|floatformat:2 }}
+                        </td>
+                        <td class="py-1 px-4 text-right text-zinc-400 border-r border-zinc-800/50 {% if row.strike > underlying %}bg-cyan-900/20{% else %}bg-zinc-950{% endif %}">
+                            {{ row.put.open_interest|default:"-"|floatformat:0 }}
+                        </td>
+                        <td class="py-1 px-4 text-right text-zinc-500 {% if row.strike > underlying %}bg-cyan-900/20{% else %}bg-zinc-950{% endif %}">
+                            {{ row.put.delta|default:"-"|floatformat:2 }}
+                        </td>
+
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -65,9 +85,12 @@
 </div>
 
 <style>
-    /* Force hide standard browser markers */
     summary::-webkit-details-marker { display: none !important; }
     summary { list-style: none !important; }
     summary:focus { outline: none; }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #09090b; }
+    ::-webkit-scrollbar-thumb { background: #27272a; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #3f3f46; }
 </style>
 {% endblock %}
