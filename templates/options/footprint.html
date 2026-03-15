@@ -1,40 +1,81 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 
 {% block content %}
-<div class="bg-[#0B0F19] min-h-screen p-8 font-sans text-zinc-300">
-
-    <div class="flex justify-between items-center mb-6 pb-4 border-b border-zinc-800/50">
-        <div class="text-[10px] text-zinc-500 font-bold tracking-[0.2em] uppercase">
-            ANCHOR: {{ snapshot.date|date:"M d" }} VS PREVIOUS
+<div class="max-w-[1600px] mx-auto p-8 font-sans text-zinc-300">
+    
+    <div class="flex justify-between items-baseline mb-12 border-b border-zinc-800 pb-6">
+        <div class="flex items-center gap-4">
+            <h1 class="text-2xl font-black uppercase italic tracking-tighter text-white">Institutional <span class="text-yellow-400">Footprint</span></h1>
+            <span class="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-600 px-3 py-1 bg-zinc-900 rounded-full border border-zinc-800">
+                Anchor: VS {{ snapshot.ref_snapshot.date|default:"Previous" }}
+            </span>
         </div>
-        <div class="text-[10px] font-bold tracking-[0.2em] uppercase text-zinc-500">
-            ES Spot: <span class="text-emerald-400 text-sm ml-1">{{ underlying|floatformat:2 }}</span>
+        <div class="text-right">
+            <span class="text-[10px] font-black uppercase tracking-widest text-zinc-500">ES SPOT: </span>
+            <span class="text-lg font-mono font-black text-white ml-2">{{ snapshot.underlying_price|floatformat:2 }}</span>
         </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-        <div class="bg-[#11151E] border border-zinc-800/80 rounded-xl p-5 shadow-xl shadow-black/40">
-            <h3 class="text-[11px] font-black text-yellow-500 uppercase tracking-widest mb-5">01_WEEKLY</h3>
-            {% with data=pillars.weekly type="bin" %}
-                {% include "options/includes/footprint_table.html" %}
-            {% endwith %}
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        
+        {% regroup bins by get_bin_type_display as bin_list %}
+        
+        {% for group in bin_list %}
+        <div class="bg-[#09090b] border border-zinc-800 rounded-2xl p-8 shadow-2xl hover:border-zinc-700 transition-all group">
+            <div class="flex justify-between items-center mb-8">
+                <h3 class="text-xs font-black uppercase tracking-[0.2em] 
+                           {% if 'WEEKLY' in group.grouper %}text-yellow-400{% elif 'MONTHLY' in group.grouper %}text-emerald-400{% else %}text-purple-400{% endif %}">
+                    {{ group.grouper }}
+                </h3>
+                <div class="h-px flex-grow mx-4 bg-zinc-900 group-hover:bg-zinc-800 transition-colors"></div>
+            </div>
+            
+            <table class="w-full text-left">
+                <thead>
+                    <tr class="text-[9px] font-black text-zinc-600 uppercase tracking-widest border-b border-zinc-900">
+                        <th class="pb-4">Zone</th>
+                        <th class="pb-4">Type</th>
+                        <th class="pb-4 text-right">Notional Δ</th>
+                        <th class="pb-4 text-right">Growth</th>
+                    </tr>
+                </thead>
+                <tbody class="text-[11px] font-bold font-mono">
+                    {% for item in group.list %}
+                    <tr class="border-b border-zinc-900/30 hover:bg-zinc-900/10 transition-colors">
+                        <td class="py-5 {% if item.zone == 'ATM' %}text-zinc-100{% else %}text-zinc-500{% endif %}">
+                            {{ item.zone }}
+                        </td>
+                        <td class="py-5 text-zinc-700 text-[9px] font-black italic uppercase">Dealer</td>
+                        <td class="py-5 text-right text-white">
+                            {{ item.notional_delta|floatformat:2 }}<span class="text-[9px] text-zinc-600 ml-0.5">M</span>
+                        </td>
+                        <td class="py-5 text-right {% if item.growth > 0 %}text-emerald-500{% elif item.growth < 0 %}text-red-500{% else %}text-zinc-700{% endif %}">
+                            {% if item.growth > 0 %}+{% endif %}{{ item.growth|floatformat:2 }}<span class="text-[9px] ml-0.5 opacity-60">M</span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
-
-        <div class="bg-[#11151E] border border-zinc-800/80 rounded-xl p-5 shadow-xl shadow-black/40">
-            <h3 class="text-[11px] font-black text-emerald-500 uppercase tracking-widest mb-5">02_MONTHLY</h3>
-            {% with data=pillars.monthly type="zone" %}
-                {% include "options/includes/footprint_table.html" %}
-            {% endwith %}
+        {% empty %}
+        <div class="col-span-3 py-32 text-center border-2 border-dashed border-zinc-900 rounded-3xl">
+            <p class="text-zinc-700 font-black uppercase tracking-widest text-xs italic">No Institutional Edge Resolved</p>
+            <p class="text-zinc-800 text-[10px] mt-2 font-mono">Run calc_footprint to populate matrix</p>
         </div>
+        {% endfor %}
+    </div>
 
-        <div class="bg-[#11151E] border border-zinc-800/80 rounded-xl p-5 shadow-xl shadow-black/40">
-            <h3 class="text-[11px] font-black text-purple-500 uppercase tracking-widest mb-5">03_QUARTERLY</h3>
-            {% with data=pillars.quarterly type="zone" %}
-                {% include "options/includes/footprint_table.html" %}
-            {% endwith %}
-        </div>
-
+    <div class="mt-12 flex justify-between items-center opacity-30 group hover:opacity-100 transition-opacity">
+        <p class="text-[9px] font-black uppercase tracking-widest text-zinc-500">Institutional Threshold: >$500k Notional</p>
+        <p class="text-[9px] font-black uppercase tracking-widest text-zinc-500 italic">FZ.SENTINEL // ALPHA_V1.2</p>
     </div>
 </div>
+
+<style>
+    body { background-color: #030303; }
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: #030303; }
+    ::-webkit-scrollbar-thumb { background: #18181b; border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: #27272a; }
+</style>
 {% endblock %}
