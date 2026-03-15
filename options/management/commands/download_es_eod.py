@@ -3,6 +3,7 @@ import warnings
 import pytz
 import databento as db
 import pandas as pd
+import numpy as np
 from datetime import timedelta, datetime
 from statistics import NormalDist
 from django.core.management.base import BaseCommand
@@ -49,7 +50,7 @@ class Black76Engine:
         MAX_ITER = 50
         TOL = 1e-4
         sigma = 0.30
-        MAX_SIGMA = 5.0  # Prevents OverflowError on deep OTM/ITM asymptotic expansion
+        MAX_SIGMA = 5.0
 
         for _ in range(MAX_ITER):
             price_est = self.price(F, K, T, sigma, opt_type)
@@ -60,7 +61,7 @@ class Black76Engine:
             if v < 1e-6: break
 
             step = diff / v
-            step = max(-0.5, min(0.5, step))  # Clamps gradient to prevent wild divergence
+            step = max(-0.5, min(0.5, step))
             sigma = sigma - step
 
             if sigma <= 0.001:
@@ -82,7 +83,7 @@ class Black76Engine:
 
 
 class Command(BaseCommand):
-    help = 'Institutional ES Downloader - Black-76 Synthesized Greeks with Overflow Protection'
+    help = 'Institutional ES Downloader - Black-76 Synthesized Greeks with NaN Protection'
 
     def add_arguments(self, parser):
         parser.add_argument('--label', type=str, help='Snapshot label', default='EOD')
@@ -124,8 +125,9 @@ class Command(BaseCommand):
             try:
                 und_stats = client.timeseries.get_range(dataset=dataset, schema="statistics", symbols=[lead_symbol],
                                                         start=start_search, end=end_search).to_df()
-                F_settle = float(
-                    und_stats[und_stats.stat_type == 3]['price'].iloc[-1]) if not und_stats.empty else 5120.0
+                # Get the last settle price for the future
+                raw_f_settle = und_stats[und_stats.stat_type == 3]['price'].iloc[-1] if not und_stats.empty else 5120.0
+                F_settle = float(raw_f_settle) if not pd.isna(raw_f_settle) else 5120.0
             except:
                 F_settle = 5120.0
 
@@ -149,8 +151,9 @@ class Command(BaseCommand):
                     stats = client.timeseries.get_range(dataset=dataset, schema="statistics", symbols=batch_ids,
                                                         stype_in="instrument_id", start=start_search,
                                                         end=end_search).to_df()
-                    if not stats.empty: pivot = stats.pivot_table(index='instrument_id', columns='stat_type',
-                                                                  values=['price', 'quantity'], aggfunc='last')
+                    if not stats.empty:
+                        pivot = stats.pivot_table(index='instrument_id', columns='stat_type',
+                                                  values=['price', 'quantity'], aggfunc='last')
                 except:
                     pass
 
@@ -158,11 +161,18 @@ class Command(BaseCommand):
                     sid = row["instrument_id"]
                     s_val = 0.0
                     oi_val = 0
-                    if not pivot.empty and sid in pivot.index:
-                        if ('price', 3) in pivot.columns: s_val = float(pivot.loc[sid].get(('price', 3), 0.0))
-                        if ('quantity', 9) in pivot.columns: oi_val = int(pivot.loc[sid].get(('quantity', 9), 0))
 
-                    strike_val = float(row.get("strike_price", 0))
+                    if not pivot.empty and sid in pivot.index:
+                        # Hardened extraction with NaN checks
+                        p_val = pivot.loc[sid].get(('price', 3), np.nan)
+                        q_val = pivot.loc[sid].get(('quantity', 9), np.nan)
+
+                        s_val = float(p_val) if not pd.isna(p_val) else 0.0
+                        oi_val = int(q_val) if not pd.isna(q_val) else 0
+
+                    raw_strike = row.get("strike_price", 0)
+                    strike_val = float(raw_strike) if not pd.isna(raw_strike) else 0.0
+
                     opt_type = row.get("instrument_class", "P")
                     dte = int(row["dte"])
 
