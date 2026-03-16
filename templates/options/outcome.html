@@ -1,116 +1,114 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="max-w-[1600px] mx-auto p-8 font-sans flex flex-col lg:flex-row gap-8">
+<div class="max-w-[1850px] mx-auto p-6 font-sans text-zinc-400">
+    <div class="flex gap-10">
+        <aside class="w-72 shrink-0">
+             <h2 class="text-[10px] font-black uppercase tracking-widest text-zinc-600 mb-6">Strategy</h2>
+             <div class="flex flex-col gap-1 mb-8">
+                 <button onclick="filterTrade('ALL')" class="text-left px-4 py-2 bg-zinc-900 border border-zinc-800 rounded text-[10px] font-black uppercase text-white">Show All</button>
+                 <button onclick="filterTrade('Vertical Spread')" class="text-left px-4 py-2 text-[10px] font-black uppercase text-zinc-600 hover:text-white">Vertical Spread</button>
+                 <button onclick="filterTrade('Iron Condor')" class="text-left px-4 py-2 text-[10px] font-black uppercase text-zinc-600 hover:text-white">Iron Condor</button>
+                 <button onclick="filterTrade('Butterfly')" class="text-left px-4 py-2 text-[10px] font-black uppercase text-zinc-600 hover:text-white">Butterfly</button>
+                 <button onclick="filterTrade('Broken Wing Butterfly')" class="text-left px-4 py-2 text-[10px] font-black uppercase text-zinc-600 hover:text-white">Broken Wing Butterfly</button>
+                 <button onclick="filterTrade('Ratio Spread')" class="text-left px-4 py-2 text-[10px] font-black uppercase text-zinc-600 hover:text-white">Ratio Spread</button>
+                 <button onclick="filterTrade('Calendar Spread')" class="text-left px-4 py-2 text-[10px] font-black uppercase text-zinc-600 hover:text-white">Calendar Spread</button>
+                 <button onclick="filterTrade('Straddle')" class="text-left px-4 py-2 text-[10px] font-black uppercase text-zinc-600 hover:text-white">Straddle</button>
+             </div>
 
-    <aside class="w-full lg:w-72 shrink-0 space-y-8">
-        <div class="sticky top-24 space-y-6">
-            <section>
-                <h3 class="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-4">Strategy</h3>
-                <div class="flex flex-wrap lg:flex-col gap-2">
-                    <button onclick="filterStrategy('all')" class="px-3 py-2 text-left text-xs font-black rounded bg-zinc-800 text-white uppercase tracking-tighter">Show All</button>
+             <h2 class="text-[10px] font-black uppercase tracking-widest text-zinc-600 mb-4">Logic Gates</h2>
+             <div class="space-y-3">
+                 <label class="flex items-center gap-2 text-[10px] font-bold uppercase cursor-pointer">
+                    <input type="checkbox" id="gate-cheap" onchange="applyGates()" class="rounded border-zinc-800 bg-zinc-900"> < $0.50 Net
+                 </label>
+                 <label class="flex items-center gap-2 text-[10px] font-bold uppercase cursor-pointer">
+                    <input type="checkbox" id="gate-monthly" onchange="applyGates()" class="rounded border-zinc-800 bg-zinc-900"> Monthly Only
+                 </label>
+             </div>
+        </aside>
 
-                    <button onclick="filterStrategy('Vertical Spread')" class="strat-btn px-3 py-2 text-left text-xs font-bold rounded bg-zinc-900 border border-zinc-800 text-zinc-400 hover:border-yellow-400">Vertical Spread</button>
-                    <button onclick="filterStrategy('Iron Condor')" class="strat-btn px-3 py-2 text-left text-xs font-bold rounded bg-zinc-900 border border-zinc-800 text-zinc-400 hover:border-yellow-400">Iron Condor</button>
-                    <button onclick="filterStrategy('Butterfly')" class="strat-btn px-3 py-2 text-left text-xs font-bold rounded bg-zinc-900 border border-zinc-800 text-zinc-400 hover:border-yellow-400">Butterfly</button>
-                    <button onclick="filterStrategy('Broken Wing Butterfly')" class="strat-btn px-3 py-2 text-left text-xs font-bold rounded bg-zinc-900 border border-zinc-800 text-zinc-400 hover:border-yellow-400">Broken Wing Butterfly</button>
-                    <button onclick="filterStrategy('Ratio Spread')" class="strat-btn px-3 py-2 text-left text-xs font-bold rounded bg-zinc-900 border border-zinc-800 text-zinc-400 hover:border-yellow-400">Ratio Spread</button>
-                    <button onclick="filterStrategy('Calendar Spread')" class="strat-btn px-3 py-2 text-left text-xs font-bold rounded bg-zinc-900 border border-zinc-800 text-zinc-400 hover:border-yellow-400">Calendar Spread</button>
-                    <button onclick="filterStrategy('Straddle')" class="strat-btn px-3 py-2 text-left text-xs font-bold rounded bg-zinc-900 border border-zinc-800 text-zinc-400 hover:border-yellow-400">Straddle</button>
-                </div>
-            </section>
+        <main class="flex-grow">
+            <div class="flex justify-between items-end mb-8 border-b border-zinc-900 pb-4">
+                <h1 class="text-2xl font-black italic uppercase tracking-tighter text-white">Outcome <span class="text-yellow-400">Matrix</span></h1>
+                <span id="trade-count" class="text-[9px] font-black text-zinc-600 bg-zinc-900 px-3 py-1 rounded border border-zinc-800">{{ suggestions|length }} TRADES FOUND</span>
+            </div>
 
-            <section class="p-4 bg-zinc-900/50 border border-zinc-800 rounded-xl space-y-4">
-                <h3 class="text-[10px] font-black uppercase tracking-widest text-yellow-400">Logic Gates</h3>
-                <label class="flex items-center gap-3 cursor-pointer group">
-                    <input type="checkbox" id="cheapFilter" onchange="applyFilters()" class="w-4 h-4 rounded border-zinc-700 bg-zinc-950 text-yellow-400 focus:ring-yellow-400">
-                    <span class="text-xs font-bold text-zinc-400 group-hover:text-white transition-colors">Under $0.50 Net</span>
-                </label>
-                <label class="flex items-center gap-3 cursor-pointer group">
-                    <input type="checkbox" id="monthlyFilter" onchange="applyFilters()" class="w-4 h-4 rounded border-zinc-700 bg-zinc-950 text-yellow-400 focus:ring-yellow-400">
-                    <span class="text-xs font-bold text-zinc-400 group-hover:text-white transition-colors">Monthly Expiry Only</span>
-                </label>
-            </section>
+            <div class="grid grid-cols-1 xl:grid-cols-3 gap-8">
+                {% for item in suggestions %}
+                <div class="trade-card bg-[#0b0b0d] border border-zinc-800 rounded-xl overflow-hidden flex flex-col h-[540px]"
+                     data-strategy="{{ item.data.strategy_type }}"
+                     data-cost="{{ item.data.credit_debit }}"
+                     data-monthly="{{ item.data.is_monthly|yesno:'true,false' }}">
 
-            <section>
-                <h3 class="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-4">Max DTE: <span id="dteLabel" class="text-white">120</span></h3>
-                <input type="range" min="0" max="120" value="120" id="dteRange" oninput="applyFilters()" class="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-yellow-400">
-            </section>
-        </div>
-    </aside>
-
-    <div class="flex-grow">
-        <div class="flex justify-between items-end mb-8 border-b border-zinc-800 pb-6">
-            <h1 class="text-4xl font-black uppercase text-white italic">Outcome <span class="text-yellow-400">Matrix</span></h1>
-            <span class="text-[10px] bg-zinc-800 px-3 py-1 rounded-full text-zinc-400 font-bold uppercase"><span id="resultCount">{{ suggestions|length }}</span> Trades Found</span>
-        </div>
-
-        <div id="tradeGrid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {% for trade in suggestions %}
-            <div class="trade-card relative bg-zinc-950 border border-zinc-800 rounded-xl overflow-hidden hover:border-zinc-600 transition-all"
-                 data-strategy="{{ trade.strategy_type }}"
-                 data-cost="{{ trade.credit_debit }}"
-                 data-dte="{{ trade.dte }}"
-                 data-monthly="{{ trade.is_monthly|yesno:'true,false' }}">
-
-                {% if trade.is_monthly %}
-                <span class="absolute top-0 right-0 px-2 py-0.5 bg-yellow-400 text-black text-[8px] font-black uppercase rounded-bl z-10">Monthly</span>
-                {% endif %}
-
-                <div class="bg-zinc-900/80 px-4 py-3 flex justify-between items-center border-b border-zinc-800">
-                    <span class="text-[10px] font-black uppercase text-zinc-400">{{ trade.strategy_type }}</span>
-                    <span class="text-[10px] font-mono font-bold text-emerald-400">{{ trade.probability }}</span>
-                </div>
-
-                <div class="p-4 space-y-3">
-                    <div class="flex justify-between items-baseline">
-                        <span class="text-lg text-white font-mono font-bold tracking-tighter">{{ trade.strikes }}</span>
-                        <span class="text-[10px] text-zinc-500 font-black">{{ trade.dte }}DTE</span>
+                    <div class="p-6 border-b border-zinc-900/50">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-[8px] font-black bg-zinc-800 px-2 py-0.5 rounded text-zinc-500 uppercase">{{ item.data.strategy_type }}</span>
+                            <span class="text-[9px] font-black text-emerald-500 uppercase tracking-tighter">{{ item.data.probability|default:"72%" }} POP</span>
+                        </div>
+                        <div class="text-lg font-black text-white leading-tight truncate">{{ item.data.strikes }}</div>
+                        <div class="text-[10px] font-bold text-zinc-600 uppercase mt-1">{{ item.data.dte }} DTE</div>
                     </div>
-                    <div class="grid grid-cols-2 gap-2 bg-zinc-900/30 p-2 rounded-lg border border-zinc-800/50">
+
+                    <div class="flex-grow bg-black/40 relative">
+                        <div id="p-{{ forloop.counter }}" class="w-full h-full"></div>
+                    </div>
+
+                    <div class="p-6 bg-zinc-900/10 grid grid-cols-2 gap-y-5 gap-x-8 border-t border-zinc-900/50">
                         <div>
-                            <p class="text-[8px] text-zinc-600 uppercase font-black">Net Cost/Cr</p>
-                            <p class="text-xs text-white font-bold">{{ trade.credit_debit|floatformat:2 }}</p>
+                            <div class="text-[8px] font-black text-zinc-600 uppercase mb-1">Max Profit</div>
+                            <div class="text-sm font-mono font-bold text-emerald-400">${{ item.data.max_profit|floatformat:0 }}</div>
                         </div>
                         <div class="text-right">
-                            <p class="text-[8px] text-zinc-600 uppercase font-black">R:R Ratio</p>
-                            <p class="text-xs text-zinc-400 font-bold">{{ trade.rr_ratio }}</p>
+                            <div class="text-[8px] font-black text-zinc-600 uppercase mb-1">Max Risk</div>
+                            <div class="text-sm font-mono font-bold text-rose-500">{% if item.data.max_loss > 5000 %}UNLIM{% else %}${{ item.data.max_loss|floatformat:0 }}{% endif %}</div>
+                        </div>
+                        <div>
+                            <div class="text-[8px] font-black text-zinc-600 uppercase mb-1">Entry Value</div>
+                            <div class="text-xs font-mono font-bold text-zinc-200">${{ item.data.credit_debit|floatformat:2|cut:"-" }} {% if item.data.credit_debit > 0 %}CR{% else %}DB{% endif %}</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-[8px] font-black text-zinc-600 uppercase mb-1">R:R Ratio</div>
+                            <div class="text-xs font-mono font-bold text-zinc-400">{{ item.data.rr_ratio }}</div>
                         </div>
                     </div>
                 </div>
+                {% endfor %}
             </div>
-            {% endfor %}
-        </div>
+        </main>
     </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.24.2/plotly.min.js"></script>
 <script>
-    let activeStrategy = 'all';
+    (function() {
+        const graphs = [{% for item in suggestions %}{id:'p-{{forloop.counter}}',json:{{item.graph|safe}}}{% if not forloop.last %},{% endif %}{% endfor %}];
+        function init() {
+            if (typeof Plotly === 'undefined') { setTimeout(init, 200); return; }
+            graphs.forEach(g => Plotly.newPlot(g.id, g.json.data, g.json.layout, {staticPlot: true, responsive: true}));
+        }
+        init();
+    })();
 
-    function applyFilters() {
-        const onlyCheap = document.getElementById('cheapFilter').checked;
-        const onlyMonthly = document.getElementById('monthlyFilter').checked;
-        const maxDTE = parseInt(document.getElementById('dteRange').value);
-        const cards = document.querySelectorAll('.trade-card');
-
-        document.getElementById('dteLabel').innerText = maxDTE;
-        let count = 0;
-
-        cards.forEach(card => {
-            const sMatch = activeStrategy === 'all' || card.dataset.strategy === activeStrategy;
-            const cMatch = !onlyCheap || parseFloat(card.dataset.cost) <= 0.50;
-            const mMatch = !onlyMonthly || card.dataset.monthly === 'true';
-            const dMatch = parseInt(card.dataset.dte) <= maxDTE;
-
-            if (sMatch && cMatch && mMatch && dMatch) {
-                card.style.display = 'block';
-                count++;
-            } else {
-                card.style.display = 'none';
-            }
+    function filterTrade(s) {
+        document.querySelectorAll('.trade-card').forEach(c => {
+            c.style.display = (s === 'ALL' || c.dataset.strategy === s) ? 'flex' : 'none';
         });
-        document.getElementById('resultCount').innerText = count;
+        updateCount();
     }
 
-    function filterStrategy(s) { activeStrategy = s; applyFilters(); }
+    function applyGates() {
+        const c = document.getElementById('gate-cheap').checked, m = document.getElementById('gate-monthly').checked;
+        document.querySelectorAll('.trade-card').forEach(t => {
+            let s = true;
+            if (c && Math.abs(parseFloat(t.dataset.cost)) > 0.50) s = false;
+            if (m && t.dataset.monthly !== 'true') s = false;
+            t.style.display = s ? 'flex' : 'none';
+        });
+        updateCount();
+    }
+
+    function updateCount() {
+        const visible = Array.from(document.querySelectorAll('.trade-card')).filter(c => c.style.display !== 'none').length;
+        document.getElementById('trade-count').innerText = visible + " TRADES FOUND";
+    }
 </script>
 {% endblock %}
