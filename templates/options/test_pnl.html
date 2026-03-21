@@ -1,10 +1,55 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>$Title$</title>
-</head>
-<body>
-$END$
-</body>
-</html>
+
+
+{% block content %}
+<div class="max-w-4xl mx-auto p-12">
+    <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-8">
+        <h1 class="text-2xl font-black text-white mb-2 uppercase italic">PnL <span class="text-yellow-400">Diagnostic</span></h1>
+
+        <p class="text-zinc-500 font-mono text-sm mb-8">Testing: {{ sug.strategy_type }} | {{ sug.strikes }}</p>
+
+        <div id="test-plot" class="w-full bg-black/40 rounded-xl border border-zinc-800" style="height: 400px; min-height: 400px;"></div>
+
+        <div id="status-log" class="mt-4 text-[10px] font-mono text-zinc-600">Initializing...</div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.24.2/plotly.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+<script>
+    (function() {
+        const log = (msg) => {
+            document.getElementById('status-log').innerText += "\n> " + msg;
+            console.log(msg);
+        };
+
+        function renderGraph() {
+            if (typeof Plotly === 'undefined') {
+                log("Plotly not ready, retrying in 500ms...");
+                setTimeout(renderGraph, 500);
+                return;
+            }
+
+            log("Plotly loaded. Parsing data...");
+            try {
+                const graphData = {{ graph_json|safe }};
+
+                // FORCE VISIBILITY: Overriding layout for the diagnostic
+                graphData.layout.autosize = true;
+                graphData.layout.height = 400;
+
+                Plotly.newPlot('test-plot', graphData.data, graphData.layout, {responsive: true});
+                log("SUCCESS: Graph rendered.");
+            } catch (e) {
+                log("ERROR: " + e.message);
+            }
+        }
+
+        // Wait for everything to settle
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', renderGraph);
+        } else {
+            renderGraph();
+        }
+    })();
+</script>
+{% endblock %}

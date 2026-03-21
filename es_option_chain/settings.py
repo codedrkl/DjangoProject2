@@ -64,21 +64,26 @@ TAILWIND_APP_NAME = 'theme'
 DATABENTO_API_KEY = env('DATABENTO_API_KEY')
 PRODUCT = "ES"                    # locked to ES only
 DATASET = "GLBX.MDP3"
-DTE_TARGET = 6
+DTE_TARGET = 120
 MIN_OPEN_INTEREST = 0             # 0 = FULL accuracy (all strikes)
 
 # Database (Postgres)
 DATABASES = {
-    'default': env.db_url(
-        'DATABASE_URL',
-        default='postgres://postgres:postgres@localhost:5432/es_options'
-    )
+    'default': env.db_url('DATABASE_URL', default='postgres://postgres:postgres@localhost:5432/es_options')
 }
 
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
 ROOT_URLCONF = 'es_option_chain.urls'
+TEMPLATES = [ ... ]  # (unchanged)
+WSGI_APPLICATION = 'es_option_chain.wsgi.application'
+
+LANGUAGE_CODE = 'en-us'
+TIME_ZONE = 'UTC'
+USE_I18N = True
+USE_TZ = True
 
 TEMPLATES = [
     {

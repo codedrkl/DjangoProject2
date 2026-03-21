@@ -3,8 +3,8 @@ import plotly
 import plotly.graph_objects as go
 from collections import defaultdict
 from django.shortcuts import render
-from django.db.models import Case, When, Value, IntegerField
-from .models import OptionChainSnapshot, TradeSuggestion
+from django.db.models import Case, When, Value, IntegerField, Prefetch
+from .models import OptionChainSnapshot, TradeSuggestion, FootprintBin
 
 
 def option_chain(request):
@@ -110,23 +110,40 @@ def outcome_view(request):
 
         enhanced_suggestions.append({
             'data': sug,
+            'rr_ratio': sug.rr_ratio,  # Keep it as the float from the DB
             'graph': json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
+
         })
 
     return render(request, 'options/outcome.html', {'snapshot': snapshot, 'suggestions': enhanced_suggestions})
 
 
+from django.shortcuts import render
+from .models import OptionChainSnapshot, FootprintBin
+
+
 def footprint_view(request):
-    snapshot = OptionChainSnapshot.objects.filter(bins__isnull=False).distinct().order_by('-timestamp').first()
+    snapshot = OptionChainSnapshot.objects.prefetch_related('footprints').first()
+
     if not snapshot:
-        return render(request, 'options/footprint.html', {'snapshot': None, 'bins': []})
+        return render(request, 'options/footprint.html', {'snapshot': None})
 
-    bins = snapshot.bins.select_related('ref_snapshot').annotate(
-        sort_order=Case(When(bin_type='WEEKLY', then=Value(1)), When(bin_type='MONTHLY', then=Value(2)),
-                        When(bin_type='QUARTERLY', then=Value(3)), output_field=IntegerField())
-    ).order_by('sort_order', 'zone')
+    # Logical isolation for Weekly (0-8 DTE currently in DB)
+    all_bins = snapshot.footprints.all().order_by('-oi_density')
 
-    return render(request, 'options/footprint.html', {'snapshot': snapshot, 'bins': bins})
+    # Filter: Top 4 Calls and Top 4 Puts for clarity
+    top_calls = [b for b in all_bins if b.net_gamma_exposure >= 0][:4]
+    top_puts = [b for b in all_bins if b.net_gamma_exposure < 0][:4]
+
+    weekly_bins = sorted(top_calls + top_puts, key=lambda x: x.strike_price)
+
+    return render(request, 'options/footprint.html', {
+        'snapshot': snapshot,
+        'weekly_bins': weekly_bins,
+        'monthly_bins': [],  # Placeholders
+        'quarterly_bins': [],
+        'state': snapshot.state_signature,
+    })
 
 
 def pnl_test_view(request):

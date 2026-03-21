@@ -20,7 +20,7 @@ def run_download():
         logging.error(f"❌ Scheduled download failed: {e}")
 
 if __name__ == '__main__':
-    scheduler = BlockingScheduler(timezone="Australia/Brisbane")   # AEST/AEDT aware
+    scheduler = BlockingScheduler(timezone="America/Vancouver")   # ← Your city
 
     scheduler.add_job(
         run_download,

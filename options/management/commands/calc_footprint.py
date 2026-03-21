@@ -1,85 +1,64 @@
+import math
+from decimal import Decimal
 from django.core.management.base import BaseCommand
-from django.db.models import Sum, F, Q
-from options.models import OptionChainSnapshot, FootprintBin
+from django.db.models import F, Q, FloatField, Sum, ExpressionWrapper
+from options.models import OptionChainSnapshot, FootprintBin, IntradayOptionContract
 
 
 class Command(BaseCommand):
-    help = 'Aggregates Institutional Footprint vs Reference Friday with Strike Granularity'
+    help = 'JATS Footprint Engine v1.6 - NaN Guard'
 
-    def add_arguments(self, parser):
-        parser.add_argument('--ref-date', type=str, help='YYYY-MM-DD of the anchor Friday', default='2026-03-06')
+    def to_safe_decimal(self, value):
+        try:
+            f_val = float(value)
+            if not math.isfinite(f_val): return None
+            return Decimal(str(round(f_val, 2)))
+        except (ValueError, TypeError):
+            return None
 
     def handle(self, *args, **options):
-        ref_date = options['ref_date']
-        curr = OptionChainSnapshot.objects.order_by('-timestamp').first()
-        ref = OptionChainSnapshot.objects.filter(date=ref_date, label='EOD').first()
-
-        if not curr or not ref:
-            self.stdout.write(
-                self.style.ERROR(f"❌ Missing data. Curr: {curr.date if curr else 'None'}, Ref: {ref_date}"))
+        timestamps = IntradayOptionContract.objects.values_list('timestamp', flat=True).distinct().order_by(
+            '-timestamp')[:2]
+        if len(timestamps) < 2:
+            self.stdout.write("Need at least two intraday snapshots for delta-footprint.")
             return
+        current_data = IntradayOptionContract.objects.filter(timestamp=timestamps[0])
+        prior_data = IntradayOptionContract.objects.filter(timestamp=timestamps[1])
 
-        self.stdout.write(f"📊 Analyzing Footprint: {curr.date} vs Anchor {ref.date}")
-        FootprintBin.objects.filter(snapshot=curr).delete()
+        self.stdout.write("👣 Initializing JATS Footprint lockdown...")
+        snapshot = OptionChainSnapshot.objects.order_by('-date', '-timestamp').first()
+        if not snapshot: return
 
-        bins = [
-            ('WEEKLY', 0, 7),
-            ('MONTHLY', 8, 45),
-            ('QUARTERLY', 46, 120)
-        ]
+        FootprintBin.objects.filter(snapshot=snapshot).delete()
 
-        INSTITUTIONAL_THRESHOLD = 500_000  # $500k Notional minimum
-        ES_MULTIPLIER = 50
+        contracts = snapshot.contracts.annotate(
+            gex_contribution=ExpressionWrapper(
+                F('open_interest') * F('settlement') * 50.0,
+                output_field=FloatField()
+            )
+        )
 
-        for code, d_min, d_max in bins:
-            # Aggregate current institutional flow
-            curr_data_all = curr.contracts.filter(dte__range=(d_min, d_max)).annotate(
-                notional=F('strike') * F('open_interest') * ES_MULTIPLIER
-            ).filter(notional__gte=INSTITUTIONAL_THRESHOLD)
+        strikes_qs = contracts.values('strike').annotate(
+            total_oi=Sum('open_interest'),
+            call_gex=Sum('gex_contribution', filter=Q(option_type='C')),
+            put_gex=Sum('gex_contribution', filter=Q(option_type='P'))
+        ).order_by('strike')
 
-            # Split into ATM and OTM zones
-            for zone in ['ATM', 'OTM']:
-                spot = float(curr.underlying_price)
-                zone_filter = Q(strike__range=(spot * 0.98, spot * 1.02)) if zone == 'ATM' else ~Q(
-                    strike__range=(spot * 0.98, spot * 1.02))
+        bins_to_create = []
+        for s in strikes_qs:
+            clean_strike = self.to_safe_decimal(s['strike'])
+            if clean_strike is None: continue
 
-                curr_zone_qs = curr_data_all.filter(zone_filter)
+            c_gex = self.to_safe_decimal(s['call_gex']) or Decimal('0.00')
+            p_gex = self.to_safe_decimal(s['put_gex']) or Decimal('0.00')
 
-                # 1. Calculate Aggregate Weights
-                curr_zone_weight = curr_zone_qs.aggregate(
-                    total_delta_weight=Sum(F('strike') * F('open_interest') * F('delta'))
-                )['total_delta_weight'] or 0.0
+            bins_to_create.append(FootprintBin(
+                snapshot=snapshot,
+                strike_price=clean_strike,
+                net_gamma_exposure=float(c_gex - p_gex),
+                oi_density=s['total_oi'] or 0
+            ))
 
-                # 2. Extract Top 3 Granular Walls (Strikes)
-                # We sort by absolute notional to find the biggest "Pins" or "Walls"
-                top_strikes_qs = curr_zone_qs.order_by('-notional')[:3]
-                walls_metadata = []
-                for contract in top_strikes_qs:
-                    walls_metadata.append({
-                        'strike': int(contract.strike),
-                        'type': contract.option_type,
-                        'oi': contract.open_interest,
-                        'notional_m': round((contract.strike * contract.open_interest * ES_MULTIPLIER) / 1_000_000, 1)
-                    })
-
-                # 3. Reference Friday Comparison
-                ref_zone_weight = ref.contracts.filter(dte__range=(d_min, d_max)).filter(zone_filter).annotate(
-                    notional=F('strike') * F('open_interest') * ES_MULTIPLIER
-                ).filter(notional__gte=INSTITUTIONAL_THRESHOLD).aggregate(
-                    total_delta_weight=Sum(F('strike') * F('open_interest') * F('delta'))
-                )['total_delta_weight'] or 0.0
-
-                growth = curr_zone_weight - ref_zone_weight
-
-                FootprintBin.objects.create(
-                    snapshot=curr,
-                    ref_snapshot=ref,
-                    bin_type=code,
-                    zone=zone,
-                    notional_delta=curr_zone_weight / 1_000_000,
-                    growth=growth / 1_000_000,
-                    volume_filter_met=True,
-                    top_walls=walls_metadata  # Inject the granular finesse
-                )
-
-        self.stdout.write(self.style.SUCCESS("✅ Institutional Footprint + Granular Walls Synced."))
+        if bins_to_create:
+            FootprintBin.objects.bulk_create(bins_to_create)
+            self.stdout.write(self.style.SUCCESS(f"✅ Footprint Optimized: {len(bins_to_create)} bins created."))
